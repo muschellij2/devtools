@@ -33,47 +33,74 @@
 #'   is set to \code{TRUE}. If no spell checker is installed, a warning is
 #'   issued.)
 #'
-#'  \item env vars set by arguments \code{check_version} and
+#'  \item env vars set by arguments \code{incoming}, \code{remote} and
 #'    \code{force_suggests}
 #' }
 #'
 #' @return An object containing errors, warnings, and notes.
 #' @param pkg package description, can be path or package name.  See
 #'   \code{\link{as.package}} for more information
-#' @param document if \code{TRUE} (the default), will update and check
-#'   documentation before running formal check.
+#' @param document If \code{NA} and the package uses roxygen2, will
+#'   rerun \code{\link{document}} prior to checking. Use \code{TRUE}
+#'   and \code{FALSE} to override this default.
 #' @param build_args Additional arguments passed to \code{R CMD build}
+#' @param check_dir the directory in which the package is checked
+#'   compatibility. \code{args = "--output=/foo/bar"} can be used to change the
+#'   check directory.
 #' @param ... Additional arguments passed on to \code{\link[pkgbuild]{build}()}.
 #' @param cleanup Deprecated.
 #' @seealso \code{\link{release}} if you want to send the checked package to
 #'   CRAN.
 #' @export
 check <- function(pkg = ".",
-                  document = TRUE,
+                  document = NA,
                   build_args = NULL,
                   ...,
                   manual = FALSE,
                   cran = TRUE,
-                  check_version = FALSE,
+                  remote = FALSE,
+                  incoming = remote,
                   force_suggests = FALSE,
                   run_dont_test = FALSE,
                   args = NULL,
                   env_vars = NULL,
                   quiet = FALSE,
                   check_dir = tempdir(),
-                  cleanup = TRUE) {
+                  cleanup = TRUE,
+                  error_on = c("never", "error", "warning", "note")) {
+
   pkg <- as.package(pkg)
+  withr::local_options(list(warn = 1))
+
+  if (rstudioapi::hasFun("documentSaveAll")) {
+    rstudioapi::documentSaveAll()
+  }
+
   if (!missing(cleanup)) {
     warning("`cleanup` is deprecated", call. = FALSE)
   }
 
+  if (missing(error_on) && !interactive()) {
+    error_on <- "warning"
+  }
+  error_on <- match.arg(error_on)
+
+  # document only if package uses roxygen, i.e. has RoxygenNote field
+  if (identical(document, NA)) {
+    document <- !is.null(pkg$roxygennote)
+  }
   if (document) {
     document(pkg)
   }
 
   if (!quiet) {
+    cat_rule(
+      left = "Building",
+      right = pkg$package,
+      background_col = "blue",
+      col = "white"
+    )
     show_env_vars(pkgbuild::compiler_flags(FALSE))
-    rule("Building ", pkg$package)
   }
 
   withr::with_envvar(pkgbuild::compiler_flags(FALSE), action = "prefix", {
@@ -91,7 +118,8 @@ check <- function(pkg = ".",
   check_built(
     built_path,
     cran = cran,
-    check_version = check_version,
+    remote = remote,
+    incoming = incoming,
     force_suggests = force_suggests,
     run_dont_test = run_dont_test,
     manual = manual,
@@ -99,7 +127,7 @@ check <- function(pkg = ".",
     env_vars = env_vars,
     quiet = quiet,
     check_dir = check_dir,
-    needs_build_tools = pkgbuild::pkg_has_src(pkg$path)
+    error_on = error_on
   )
 }
 
@@ -108,9 +136,11 @@ check <- function(pkg = ".",
 #' @param path Path to built package.
 #' @param cran if \code{TRUE} (the default), check using the same settings as
 #'   CRAN uses.
-#' @param check_version Sets \code{_R_CHECK_CRAN_INCOMING_} env var.
-#'   If \code{TRUE}, performs a number of checked related
-#'   to version numbers of packages on CRAN.
+#' @param remote Sets \code{_R_CHECK_CRAN_INCOMING_REMOTE_} env var.
+#'   If \code{TRUE}, performs a number of CRAN incoming checks that require
+#'   remote access.
+#' @param incoming Sets \code{_R_CHECK_CRAN_INCOMING_} env var.
+#'   If \code{TRUE}, performs a number of CRAN incoming checks.
 #' @param force_suggests Sets \code{_R_CHECK_FORCE_SUGGESTS_}. If
 #'   \code{FALSE} (the default), check will proceed even if all suggested
 #'   packages aren't found.
@@ -121,19 +151,23 @@ check <- function(pkg = ".",
 #'   (\code{--no-manual}).
 #' @param args Additional arguments passed to \code{R CMD check}
 #' @param env_vars Environment variables set during \code{R CMD check}
-#' @param needs_build_tools If \code{TRUE}, will ensure build tools are
-#'   available when checking the package.
-#' @param check_dir the directory in which the package is checked
 #' @param quiet if \code{TRUE} suppresses output from this function.
+#' @inheritParams rcmdcheck::rcmdcheck
 check_built <- function(path = NULL, cran = TRUE,
-                        check_version = FALSE, force_suggests = FALSE,
+                        remote = FALSE, incoming = remote, force_suggests = FALSE,
                         run_dont_test = FALSE, manual = FALSE, args = NULL,
-                        env_vars = NULL, needs_build_tools = TRUE,
-                        check_dir = tempdir(), quiet = FALSE) {
+                        env_vars = NULL,  check_dir = tempdir(), quiet = FALSE,
+                        error_on = c("never", "error", "warning", "note")) {
+
+  if (missing(error_on) && !interactive()) {
+    error_on <- "warning"
+  }
+  error_on <- match.arg(error_on)
 
   pkgname <- gsub("_.*?$", "", basename(path))
 
   args <- c("--timings", args)
+  args <- c(paste0("--output=", normalizePath(check_dir)), args)
   if (cran) {
     args <- c("--as-cran", args)
   }
@@ -154,42 +188,32 @@ check_built <- function(path = NULL, cran = TRUE,
     args <- c(args, "--no-manual")
   }
 
-  env_vars <- check_env_vars(cran, check_version, force_suggests, env_vars)
+  env_vars <- check_env_vars(cran, remote, incoming, force_suggests, env_vars)
   if (!quiet) {
+    cat_rule(
+      left = "Checking",
+      right = pkgname,
+      background_col = "blue",
+      col = "white"
+    )
     show_env_vars(env_vars)
-    rule("Checking ", pkgname)
   }
 
-  pkgbuild::rcmd_build_tools(
-    "check",
-    c(path, args),
-    wd = check_dir,
-    env = env_vars,
-    echo = !quiet,
-    show = !quiet,
-    required = needs_build_tools
-  )
-
-  package_path <- file.path(
-    normalizePath(check_dir),
-    paste(pkgname, ".Rcheck", sep = "")
-  )
-  if (!file.exists(package_path)) {
-    stop("Check failed: '", package_path, "' doesn't exist", call. = FALSE)
-  }
-
-  # Record successful completion
-  writeLines("OK", file.path(package_path, "COMPLETE"))
-
-  log_path <- file.path(package_path, "00check.log")
-  parse_check_results(log_path)
+  withr::with_envvar(env_vars, action = "prefix", {
+    rcmdcheck::rcmdcheck(path, quiet = quiet, args = args, error_on = error_on)
+  })
 }
 
-check_env_vars <- function(cran = FALSE, check_version = FALSE,
-                           force_suggests = TRUE, env_vars) {
+check_env_vars <- function(cran = FALSE, remote = FALSE, incoming = remote,
+                           force_suggests = TRUE, env_vars = character()) {
   c(
     aspell_env_var(),
-    "_R_CHECK_CRAN_INCOMING_" = as.character(check_version),
+    # Switch off expensive check for package version
+    # https://github.com/r-lib/devtools/issues/1271
+    if (getRversion() >= "3.4.0" && as.numeric(R.version[["svn rev"]]) >= 70944) {
+      c("_R_CHECK_CRAN_INCOMING_REMOTE_" = as.character(remote))
+    },
+    "_R_CHECK_CRAN_INCOMING_" = as.character(incoming),
     "_R_CHECK_FORCE_SUGGESTS_" = as.character(force_suggests),
     env_vars
   )
@@ -203,6 +227,7 @@ aspell_env_var <- function() {
 }
 
 show_env_vars <- function(env_vars) {
-  rule("Setting env vars")
-  message(paste0(format(names(env_vars)), ": ", unname(env_vars), collapse = "\n"))
+  cat_line("Setting env vars:", col = "darkgrey")
+  cat_bullet(paste0(format(names(env_vars)), ": ", unname(env_vars)), col = "darkgrey")
+  cat_rule(col = "darkgrey")
 }

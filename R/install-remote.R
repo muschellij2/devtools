@@ -12,8 +12,13 @@
 #' @noRd
 install_remote <- function(remote, ..., force = FALSE, quiet = FALSE,
                            out_dir = NULL, skip_if_log_exists = FALSE,
+<<<<<<< HEAD
                            tmpdir = tempdir(),
                            pattern = "devtools") {
+=======
+                           repos = getOption("repos"), type = getOption("pkgType"),
+                           dependencies = NA) {
+>>>>>>> upstream/master
   stopifnot(is.remote(remote))
 
   remote_sha <- remote_sha(remote)
@@ -41,39 +46,40 @@ install_remote <- function(remote, ..., force = FALSE, quiet = FALSE,
   }
 
   if (is_windows && inherits(remote, "cran_remote")) {
-    install_packages(package_name, repos = remote$repos, type = remote$pkg_type, dependencies = NA, ..., quiet = quiet,
-                     out_dir = out_dir, skip_if_log_exists = skip_if_log_exists)
+    install_packages(
+      package_name, repos = remote$repos, type = remote$pkg_type,
+      dependencies = dependencies, ..., quiet = quiet, out_dir = out_dir,
+      skip_if_log_exists = skip_if_log_exists)
     return(invisible(TRUE))
   }
 
   bundle <- remote_download(remote, quiet = quiet)
   on.exit(unlink(bundle), add = TRUE)
 
+<<<<<<< HEAD
   source <- source_pkg(bundle, subdir = remote$subdir,
                        tmpdir = tmpdir,
                        pattern = pattern)
+=======
+  if (inherits(remote, "url_remote") && remote$pkg_type == "binary") {
+    install_packages(bundle, repos = NULL, dependencies = dependencies, ...,
+      quiet = quiet, out_dir = out_dir, skip_if_log_exists = skip_if_log_exists)
+    return(invisible(TRUE))
+  }
+
+  source <- source_pkg(bundle, subdir = remote$subdir)
+>>>>>>> upstream/master
   on.exit(unlink(source, recursive = TRUE), add = TRUE)
 
   metadata <- remote_metadata(remote, bundle, source)
 
   install(source, ..., quiet = quiet, metadata = metadata,
-          out_dir = out_dir, skip_if_log_exists = skip_if_log_exists)
-}
-
-try_install_remote <- function(..., quiet = FALSE) {
-  tryCatch(
-    install_remote(..., quiet = quiet),
-    error = function(e) {
-      if (!quiet) {
-        message("Installation failed: ", paste(deparse(conditionCall(e)), collapse = " "), " : ", conditionMessage(e))
-      }
-      FALSE
-    }
-  )
+          out_dir = out_dir, skip_if_log_exists = skip_if_log_exists,
+          repos = repos, type = type, dependencies = dependencies)
 }
 
 install_remotes <- function(remotes, ...) {
-  invisible(vapply(remotes, try_install_remote, ..., FUN.VALUE = logical(1)))
+  invisible(vapply(remotes, install_remote, ..., FUN.VALUE = logical(1)))
 }
 
 # Add metadata
@@ -154,7 +160,7 @@ remote_sha <- function(remote, ...) UseMethod("remote_sha")
 
 package2remote <- function(name, repos = getOption("repos"), type = getOption("pkgType")) {
 
-  x <- tryCatch(packageDescription(name, lib.loc = .libPaths()[[1]]), error = function(e) NA, warning = function(e) NA)
+  x <- tryCatch(packageDescription(name, lib.loc = .libPaths()), error = function(e) NA, warning = function(e) NA)
 
   # will be NA if not installed
   if (identical(x, NA)) {
@@ -183,6 +189,13 @@ package2remote <- function(name, repos = getOption("repos"), type = getOption("p
       username = x$RemoteUsername,
       ref = x$RemoteRef,
       sha = x$RemoteSha),
+    gitlab = remote("gitlab",
+      host = x$RemoteHost,
+      repo = x$RemoteRepo,
+      subdir = x$RemoteSubdir,
+      username = x$RemoteUsername,
+      ref = x$RemoteRef,
+      sha = x$RemoteSha),
     git = remote("git",
       url = x$RemoteUrl,
       ref = x$RemoteRef,
@@ -205,13 +218,21 @@ package2remote <- function(name, repos = getOption("repos"), type = getOption("p
       path = x$RemoteUrl,
       branch = x$RemoteBranch,
       subdir = x$RemoteSubdir,
-      sha = x$RemoteSha %||% x$Version,
+      sha = {
+        # Packages installed locally might have RemoteSha == NA_character_
+        sha <- x$RemoteSha
+        if (is.null(sha) || (length(sha) == 1 && is.na(sha))) {
+          sha <- x$Version
+        }
+        sha
+      },
       username = x$RemoteUsername,
       repo = x$RemoteRepo),
     url = remote("url",
       url = x$RemoteUrl,
       subdir = x$RemoteSubdir,
-      config = x$RemoteConfig),
+      config = x$RemoteConfig,
+      pkg_type = x$RemotePkgType),
     bioc = remote("bioc",
       repo = x$RemoteRepo,
       mirror = x$RemoteMirror,

@@ -8,7 +8,7 @@
 #' @param subdir subdirectory within url bundle that contains the R package.
 #' @param config additional configuration argument (e.g. proxy,
 #'   authentication) passed on to \code{\link[httr]{GET}}.
-#' @param ... Other arguments passed on to \code{\link{install}}.
+#' @param ... Other arguments passed on to \code{\link{install.packages}}.
 #' @param quiet if \code{TRUE} suppresses output from this function.
 #' @export
 #' @family package installation
@@ -22,10 +22,18 @@ install_url <- function(url, subdir = NULL, config = list(), ..., quiet = FALSE)
 }
 
 url_remote <- function(url, subdir = NULL, config = list()) {
+
+  if (file_ext(url) == "zip" || file_ext(url) == "tgz") {
+    pkg_type = "binary"
+  } else {
+    pkg_type = "source"
+  }
+
   remote("url",
     url = url,
     subdir = subdir,
-    config = config
+    config = config,
+    pkg_type = pkg_type
   )
 }
 
@@ -35,7 +43,7 @@ remote_download.url_remote <- function(x, quiet = FALSE) {
     message("Downloading package from url: ", x$url)
   }
 
-  bundle <- tempfile(fileext = paste0(".", file_ext(x$url)))
+  bundle <- file.path(tempdir(), basename(x$url))
   download(bundle, x$url, x$config)
 }
 
@@ -44,7 +52,8 @@ remote_metadata.url_remote <- function(x, bundle = NULL, source = NULL) {
   list(
     RemoteType = "url",
     RemoteUrl = x$url,
-    RemoteSubdir = x$subdir
+    RemoteSubdir = x$subdir,
+    RemotePkgType = x$pkg_type
   )
 }
 

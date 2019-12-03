@@ -1,24 +1,31 @@
-#' Execute all \pkg{test_that} tests in a package.
+#' Execute \pkg{test_that} tests in a package.
 #'
-#' Tests are assumed to be located in either the \code{inst/tests/} or
-#' \code{tests/testthat} directory (the latter is recommended).
-#' See \code{\link[testthat]{test_dir}} for the naming convention of test
-#' scripts within one of those directories and
-#' \code{\link[testthat]{test_check}} for the folder structure conventions.
+#' `test()` is a shortcut for [testthat::test_dir()], it runs all of a
+#'   package's tests.
+#' `test_file` runs `test()` on the active file.
+#' `test_coverage()` computes test coverage for your package. It is a shortcut
+#'   for [covr::package_coverage()] and [covr::report()].
+#' `test_coverage_file()` computes test coverage for the active file. Is a
+#'   shortcut for [covr::file_coverage()] and [covr::report()].
 #'
-#' If no testing infrastructure is present
-#' (detected by the \code{uses_testthat} function), you'll be asked if you want
-#' devtools to create it for you (in interactive sessions only). See
-#' \code{\link{use_test}} for more details.
-#'
+#' @md
 #' @param pkg package description, can be path or package name. See
-#'   \code{\link{as.package}} for more information
-#' @param ... additional arguments passed to \code{\link[testthat]{test_dir}}
+#'   [as.package()] for more information
+#' @param ... additional arguments passed to [testthat::test_dir()] and
+#'   [covr::package_coverage()]
+#' @param file One or more source or test files. If a source file the
+#'   corresponding test file will be run. The default is to use the active file
+#'   in RStudio (if available).
 #' @inheritParams testthat::test_dir
 #' @inheritParams run_examples
 #' @export
 test <- function(pkg = ".", filter = NULL, ...) {
   check_suggested("testthat")
+
+  if (rstudioapi::hasFun("documentSaveAll")) {
+    rstudioapi::documentSaveAll()
+  }
+
   pkg <- as.package(pkg)
 
   if (!uses_testthat(pkg) && interactive()) {
@@ -47,7 +54,7 @@ test <- function(pkg = ".", filter = NULL, ...) {
   # Run tests in a child of the namespace environment, like
   # testthat::test_package
   message("Loading ", pkg$package)
-  ns_env <- load_all(pkg, quiet = TRUE)$env
+  ns_env <- load_all(pkg$path, quiet = TRUE)$env
 
   message("Testing ", pkg$package)
   Sys.sleep(0.05); utils::flush.console() # Avoid misordered output in RStudio
@@ -55,12 +62,37 @@ test <- function(pkg = ".", filter = NULL, ...) {
   env <- new.env(parent = ns_env)
 
   testthat_args <- list(test_path, filter = filter, env = env, ... = ...)
-  if (packageVersion("testthat") > "1.0.2") {
-    testthat_args <- c(testthat_args, load_helpers = FALSE, encoding = pkg$encoding %||% "unknown")
+  if (packageVersion("testthat") >= "1.0.2.9000") { # 2.0.0
+    testthat_args <- c(testthat_args, load_helpers = FALSE)
+  } else if (packageVersion("testthat") > "1.0.2") {
+    testthat_args <- c(testthat_args, load_helpers = FALSE)
+  }
+
+  withr::with_options(c(useFancyQuotes = FALSE),
+    withr::with_envvar(r_env_vars(),
+      do.call(testthat::test_dir, testthat_args)
+    )
+  )
+}
+
+#' @export
+#' @rdname test
+test_coverage <- function(pkg = ".", ...) {
+  pkg <- as.package(pkg)
+
+  check_suggested("covr")
+
+  if (rstudioapi::hasFun("documentSaveAll")) {
+    rstudioapi::documentSaveAll()
   }
 
   withr::with_envvar(r_env_vars(),
-    do.call(testthat::test_dir, testthat_args))
+    coverage <- covr::package_coverage(pkg$path, ...)
+  )
+
+  covr::report(coverage)
+
+  invisible(coverage)
 }
 
 find_test_dir <- function(path) {
@@ -82,7 +114,7 @@ find_test_dir <- function(path) {
 #' @keywords internal
 #' @examples
 #' if (has_tests()) {
-#' devtest("testData")
+#' devtest("testUseData")
 #' }
 #' @export
 devtest <- function(package) {
@@ -106,4 +138,91 @@ uses_testthat <- function(pkg = ".") {
   )
 
   any(dir.exists(paths))
+}
+
+#' @export
+#' @rdname test
+test_file <- function(file = find_active_file(), ...) {
+  is_source_file <- basename(dirname(file)) == "R"
+
+  has_r_ext <- grepl("\\.[rR]$", file)
+  if (any(!has_r_ext)) {
+    stop("file(s): ",
+         paste0("'", file[!has_r_ext], "'", collapse = ", "),
+         " are not R files", call. = FALSE)
+  }
+
+  file <- basename(file)
+  file[!is_source_file] <- sub("^test-?", "", file[!is_source_file])
+
+  file <- sub("\\.[rR]$", "", file)
+
+  regex <- paste0("^", escape_special_regex(file), "$", collapse = "|")
+
+  test(filter = regex, ...)
+}
+
+find_active_file <- function(arg = "file") {
+  if (!rstudioapi::isAvailable()) {
+    stop("Argument `", arg, "` is missing, with no default", call. = FALSE)
+  }
+  rstudioapi::getSourceEditorContext()$path
+}
+
+find_test_file <- function(file) {
+  dir <- basename(dirname(file))
+  if (dir != "R") {
+    stop("Open file not in `R/` directory", call. = FALSE)
+  }
+
+  if (!grepl("\\.[Rr]$", file)) {
+    stop("Open file is does not end in `.R`", call. = FALSE)
+  }
+
+  file.path("tests", "testthat", paste0("test-", basename(file)))
+}
+
+find_source_file <- function(file) {
+  dir <- basename(dirname(file))
+
+  if (dir != "testthat") {
+    stop("Open file not in `tests/testthat/` directory", call. = FALSE)
+  }
+
+  if (!grepl("\\.[Rr]$", file)) {
+    stop("Open file is does not end in `.R`", call. = FALSE)
+  }
+
+  file.path("R", gsub("^test-", "", basename(file)))
+}
+
+#' @rdname test
+#' @export
+test_coverage_file <- function(file = find_active_file(), ...) {
+  is_source_file <- basename(dirname(file)) == "R"
+
+  source_files <- normalizePath(winslash = "/", c(
+    vapply(file[!is_source_file], find_source_file, character(1)),
+    file[is_source_file]))
+
+  test_files <- normalizePath(winslash = "/", c(
+    vapply(file[is_source_file], find_test_file, character(1)),
+    file[!is_source_file]))
+
+  pkg <- as.package(dirname(file)[[1]])
+
+  env <- load_all(pkg$path, quiet = TRUE)$env
+
+  withr::with_envvar(r_env_vars(),
+    coverage <- withr::with_dir("tests/testthat",
+      covr::file_coverage(source_files, test_files, ..., parent_env = env))
+  )
+
+  # Use relative paths
+  attr(coverage, "relative") <- TRUE
+  attr(coverage, "package") <- pkg
+
+  covr::report(coverage)
+
+  invisible(coverage)
 }

@@ -2,7 +2,9 @@
 title: "Devtools dependencies"
 author: "Jim Hester, Hadley Wickham"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output:
+  rmarkdown::html_vignette:
+    keep_md: true
 vignette: >
   %\VignetteIndexEntry{Devtools dependencies}
   %\VignetteEngine{knitr::rmarkdown}
@@ -58,6 +60,9 @@ All of the currently supported install sources are available, see the 'See
 Also' section in `?install` for a complete list.
 
 ```yaml
+# GitLab
+Remotes: gitlab::jimhester/covr
+
 # Git
 Remotes: git::git@bitbucket.org:dannavarro/lsr-package.git
 

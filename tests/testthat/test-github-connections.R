@@ -32,7 +32,7 @@ test_that("GitHub non-usage is handled", {
 
   expect_identical(github_dummy, github_info(test_pkg))
 
-  expect_error(use_github_links(test_pkg), "Cannot detect .* GitHub")
+  expect_error(usethis::use_github_links(), "Cannot detect .* GitHub")
 
   erase(test_pkg)
 
@@ -51,7 +51,7 @@ test_that("github info and links can be queried and manipulated", {
   expect_true(uses_github(test_pkg))
 
   gh_info <- github_info(test_pkg)
-  expect_equal(gh_info$username, "hadley")
+  expect_equal(gh_info$username, "r-lib")
   expect_equal(gh_info$repo, "devtools")
 
   desc_path <- file.path(test_pkg, "DESCRIPTION")
@@ -67,7 +67,6 @@ test_that("github info and links can be queried and manipulated", {
 
   ## make sure we don't clobber existing links
   mtime_before <- file.info(desc_path)$mtime
-  expect_message(use_github_links(test_pkg), "found and preserved")
   mtime_after <- file.info(desc_path)$mtime
   expect_identical(mtime_before, mtime_after)
 
@@ -97,7 +96,7 @@ test_that("github_info() prefers, but doesn't require, remote named 'origin'", {
     "https://github.com/twitter/AnomalyDetection.git")
 
   ## defaults to "origin"
-  expect_equal(github_info(test_pkg)$username, "hadley")
+  expect_equal(github_info(test_pkg)$username, "r-lib")
   expect_equal(github_info(test_pkg)$repo, "devtools")
 
   ## another remote will be used if no "origin"
@@ -120,9 +119,9 @@ test_that("github_info() prefers, but doesn't require, remote named 'origin'", {
 })
 
 test_that("username and repo are extracted from github remote URL", {
-  gh_info <- list(username = "hadley", repo = "devtools",
-                  fullname = "hadley/devtools")
-  expect_identical(github_remote_parse("https://github.com/hadley/devtools.git"), gh_info)
-  expect_identical(github_remote_parse("https://github.com/hadley/devtools"), gh_info)
-  expect_identical(github_remote_parse("git@github.com:hadley/devtools.git"), gh_info)
+  gh_info <- list(username = "r-lib", repo = "devtools",
+                  fullname = "r-lib/devtools")
+  expect_identical(github_remote_parse("https://github.com/r-lib/devtools.git"), gh_info)
+  expect_identical(github_remote_parse("https://github.com/r-lib/devtools"), gh_info)
+  expect_identical(github_remote_parse("git@github.com:r-lib/devtools.git"), gh_info)
 })

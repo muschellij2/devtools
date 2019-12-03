@@ -11,7 +11,7 @@
 #'   recent version of the package, this function simply calls
 #'   \code{\link{install}}. Otherwise, it looks at the list of
 #'   archived source tarballs and tries to install an older version instead.
-#' @param ... Other arguments passed on to \code{\link{install}}.
+#' @param ... Other arguments passed on to \code{\link{install.packages}}.
 #' @inheritParams utils::install.packages
 #' @inheritParams install_url
 #' @author Jeremy Stephens
@@ -24,8 +24,7 @@ install_version <- function(package, version = NULL,
   if (package %in% row.names(available)) {
     current.version <- available[package, 'Version']
     if (is.null(version) || version == current.version) {
-      return(install.packages(package, repos = repos, contriburl = contriburl,
-        type = type, ...))
+      return(install.packages(package, repos = repos, type = type, ...))
     }
   }
 

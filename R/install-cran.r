@@ -10,7 +10,7 @@
 #' @examples
 #' \dontrun{
 #' install_cran("ggplot2")
-#' install_cran(c("httpuv", "shiny")
+#' install_cran(c("httpuv", "shiny"))
 #' }
 install_cran <- function(pkgs, repos = getOption("repos"), type = getOption("pkgType"), ..., quiet = FALSE) {
 
@@ -55,7 +55,13 @@ remote_download.cran_remote <- function(x, quiet = FALSE) {
 }
 
 download_cran <- function(x, quiet, dest_dir) {
-  download.packages(x$name, destdir = dest_dir, repos = x$repos, type = x$pkg_type, quiet = quiet)[1, 2]
+  # For ‘download.packages’, ‘type = "both"’ looks at source packages only.
+  # We want to download the binary package if it is available
+  type <- x$pkg_type
+  if (type == "both") {
+    type <- "binary"
+  }
+  download.packages(x$name, destdir = dest_dir, repos = x$repos, type = type, quiet = quiet)[1, 2]
 }
 
 #' @export
@@ -63,7 +69,7 @@ remote_metadata.cran_remote <- function(x, bundle = NULL, source = NULL) {
   version <- read_dcf(file.path(source, "DESCRIPTION"))$Version
   list(
     RemoteType = "cran",
-    RemoteSha = trimws(version),
+    RemoteSha = trim_ws(version),
     RemoteRepos = paste0(deparse(x$repos), collapse = ""),
     RemotePkgType = x$pkg_type
   )
@@ -86,7 +92,7 @@ remote_package_name.cran_remote <- function(remote, ...) {
 remote_sha.cran_remote <- function(remote, url = "https://github.com", ...) {
   cran <- available_packages(remote$repos, remote$pkg_type)
 
-  trimws(unname(cran[, "Version"][match(remote$name, rownames(cran))]))
+  trim_ws(unname(cran[, "Version"][match(remote$name, rownames(cran))]))
 }
 
 #' @export

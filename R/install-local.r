@@ -60,7 +60,16 @@ remote_metadata.local_remote <- function(x, bundle = NULL, source = NULL) {
 remote_metadata.package <- remote_metadata.local_remote
 
 #' @export
+<<<<<<< HEAD
 remote_package_info.local_remote <- function(remote, ...) {
+=======
+remote_package_name.local_remote <- function(remote, ...) {
+  is_tarball <- !dir.exists(remote$path)
+  if (is_tarball) {
+    # Assume the name is the name of the tarball
+    return(sub("_.*$", "", basename(remote$path)))
+  }
+>>>>>>> upstream/master
   description_path <- file.path(remote$path, "DESCRIPTION")
 
   read_dcf(description_path)
@@ -74,6 +83,11 @@ remote_package_name.local_remote <- function(remote, ...) {
 
 #' @export
 remote_sha.local_remote <- function(remote, ...) {
+  is_tarball <- !dir.exists(remote$path)
+  if (is_tarball) {
+    return(NA_character_)
+  }
+
   if (uses_git(remote$path)) {
     if (git_uncommitted(remote$path)) {
       return(NA_character_)

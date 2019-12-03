@@ -88,11 +88,15 @@ remote_package_info.git_remote <- function(remote, ...) {
       quiet = TRUE))
 
   if (inherits(res, "try-error")) {
+<<<<<<< HEAD
     return(list(Package = NA_character_,
                 Version = NA_character_))
+=======
+    return(NA_character_)
+>>>>>>> upstream/master
   }
 
-  # git archive return a tar file, so extract it to tempdir and read the DCF
+  # git archive returns a tar file, so extract it to tempdir and read the DCF
   utils::untar(tmp, files = description_path, exdir = tempdir())
 
   read_dcf(file.path(tempdir(), description_path))
@@ -106,13 +110,6 @@ remote_package_name.git_remote <- function(remote, ...) {
 
 #' @export
 remote_sha.git_remote <- function(remote, ...) {
-  # If the remote ref is the same as the sha it is a pinned commit so just
-  # return that.
-  if (!is.null(remote$ref) &&
-    grepl(paste0("^", remote$ref), remote$sha)) {
-    return(remote$sha)
-  }
-
   tryCatch({
     res <- git2r::remote_ls(remote$url, credentials=remote$credentials, ...)
 
@@ -120,8 +117,9 @@ remote_sha.git_remote <- function(remote, ...) {
 
     found <- grep(pattern = paste0("/", branch), x = names(res))
 
+    # If none found, assume it is a Sha1, so return the ref
     if (length(found) == 0) {
-      return(NA)
+      return(remote$ref)
     }
 
     unname(res[found[1]])

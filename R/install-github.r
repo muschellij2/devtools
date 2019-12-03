@@ -9,10 +9,11 @@
 #'   (see below); if both are specified, the values in \code{repo} take
 #'   precedence.
 #' @param username User name. Deprecated: please include username in the
-#'   \code{repo}
-#' @param ref Desired git reference. Could be a commit, tag, or branch
-#'   name, or a call to \code{\link{github_pull}}. Defaults to \code{"master"}.
+#'   \code{repo} instead.
+#' @param ref Desired git reference. Deprecated: please include ref in
+#'   \code{repo} instead.
 #' @param subdir subdirectory within repo that contains the R package.
+#'   Deprecated: please include subdir in \code{repo} instead.
 #' @param auth_token To install from a private repo, generate a personal
 #'   access token (PAT) in \url{https://github.com/settings/tokens} and
 #'   supply to this argument. This is safer than using a password because
@@ -41,7 +42,7 @@
 #'   "mfrasca/r-logging/pkg"))
 #'
 #' # Update devtools to the latest version, on Linux and Mac
-#' install_github("hadley/devtools")
+#' install_github("r-lib/devtools")
 #'
 #' # To install from a private repo, use auth_token with a token
 #' # from https://github.com/settings/tokens. You only need the
@@ -52,7 +53,7 @@
 #' }
 install_github <- function(repo, username = NULL,
                            ref = "master", subdir = NULL,
-                           auth_token = github_pat(quiet),
+                           auth_token = github_pat(),
                            host = "https://api.github.com", quiet = FALSE,
                            ...) {
 
@@ -67,7 +68,7 @@ github_remote <- function(repo, username = NULL, ref = NULL, subdir = NULL,
                        host = "https://api.github.com") {
 
   meta <- parse_git_repo(repo)
-  meta <- github_resolve_ref(meta$ref %||% ref, meta)
+  meta <- github_resolve_ref(meta$ref %||% ref, meta, auth_token = auth_token, host = host)
 
   if (is.null(meta$username)) {
     meta$username <- username %||% getOption("github.user") %||%
@@ -89,14 +90,14 @@ github_remote <- function(repo, username = NULL, ref = NULL, subdir = NULL,
 
 #' @export
 remote_download.github_remote <- function(x, quiet = FALSE) {
-  dest <- tempfile(fileext = paste0(".zip"))
+  dest <- tempfile(fileext = paste0(".tar.gz"))
 
   if (missing_protocol <- !grepl("^[^:]+?://", x$host)) {
     x$host <- paste0("https://", x$host)
   }
 
   src_root <- paste0(x$host, "/repos/", x$username, "/", x$repo)
-  src <- paste0(src_root, "/zipball/", x$ref)
+  src <- paste0(src_root, "/tarball/", x$ref)
 
   if (!quiet) {
     message("Downloading GitHub repo ", x$username, "/", x$repo, "@", x$ref,
@@ -170,25 +171,25 @@ github_pull <- function(pull) structure(pull, class = "github_pull")
 #' @export
 github_release <- function() structure(NA_integer_, class = "github_release")
 
-github_resolve_ref <- function(x, params) UseMethod("github_resolve_ref")
+github_resolve_ref <- function(x, params, ...) UseMethod("github_resolve_ref")
 
 #' @export
-github_resolve_ref.default <- function(x, params) {
+github_resolve_ref.default <- function(x, params, ...) {
   params$ref <- x
   params
 }
 
 #' @export
-github_resolve_ref.NULL <- function(x, params) {
+github_resolve_ref.NULL <- function(x, params, ...) {
   params$ref <- "master"
   params
 }
 
 #' @export
-github_resolve_ref.github_pull <- function(x, params) {
+github_resolve_ref.github_pull <- function(x, params, ..., auth_token, host) {
   # GET /repos/:user/:repo/pulls/:number
   path <- file.path("repos", params$username, params$repo, "pulls", x)
-  response <- github_GET(path)
+  response <- github_GET(path, pat = auth_token, host = host)
 
   params$username <- response$head$user$login
   params$ref <- response$head$ref
@@ -197,10 +198,10 @@ github_resolve_ref.github_pull <- function(x, params) {
 
 # Retrieve the ref for the latest release
 #' @export
-github_resolve_ref.github_release <- function(x, params) {
+github_resolve_ref.github_release <- function(x, params, ..., auth_token, host) {
   # GET /repos/:user/:repo/releases
   path <- paste("repos", params$username, params$repo, "releases", sep = "/")
-  response <- github_GET(path)
+  response <- github_GET(path, pat = auth_token, host = host)
   if (length(response) == 0L)
     stop("No releases found for repo ", params$username, "/", params$repo, ".")
 
@@ -242,6 +243,7 @@ parse_git_repo <- function(path) {
 }
 
 #' @export
+<<<<<<< HEAD
 remote_package_info.github_remote <- function(remote, url = "https://github.com", ...) {
 
   tmp <- tempfile()
@@ -275,56 +277,28 @@ remote_package_info.github_remote <- function(remote, url = "https://github.com"
 
 #' @export
 remote_package_name.github_remote <- function(remote, url = "https://raw.githubusercontent.com", ...) {
+=======
+remote_package_name.github_remote <- function(remote, ...) {
+>>>>>>> upstream/master
 
-  tmp <- tempfile()
-  path <- paste(c(
-      remote$username,
-      remote$repo,
-      remote$ref,
-      remote$subdir,
-      "DESCRIPTION"), collapse = "/")
+  desc <- github_DESCRIPTION(username = remote$username, repo = remote$repo,
+    host = remote$host, ref = remote$ref, pat = remote$auth_token)
 
-  if (!is.null(remote$auth_token)) {
-    auth <- httr::authenticate(
-      user = remote$auth_token,
-      password = "x-oauth-basic",
-      type = "basic"
-    )
-  } else {
-    auth <- NULL
-  }
-
-  req <- httr::GET(url, path = path, httr::write_disk(path = tmp), auth)
-
-  if (httr::status_code(req) >= 400) {
+  if (is.null(desc)) {
     return(NA_character_)
   }
+
+  tmp <- tempfile()
+  writeLines(desc, tmp)
+  on.exit(unlink(tmp))
 
   read_dcf(tmp)$Package
 }
 
 #' @export
-remote_sha.github_remote <- function(remote, url = "https://github.com", ...) {
-  # If the remote ref is the same as the sha it is a pinned commit so just
-  # return that.
-  if (!is.null(remote$ref) && !is.null(remote$sha) &&
-    grepl(paste0("^", remote$ref), remote$sha)) {
-    return(remote$sha)
-  }
-
-  tryCatch({
-    res <- git2r::remote_ls(
-      paste0(url, "/", remote$username, "/", remote$repo, ".git"),
-      ...)
-
-    found <- grep(pattern = paste0("/", remote$ref), x = names(res))
-
-    if (length(found) == 0) {
-      return(NA_character_)
-    }
-
-    unname(res[found[1]])
-  }, error = function(e) NA_character_)
+remote_sha.github_remote <- function(remote, ...) {
+  github_sha(username = remote$username, repo = remote$repo,
+    host = remote$host, ref = remote$ref, pat = remote$auth_token)
 }
 
 #' @export

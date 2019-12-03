@@ -22,32 +22,44 @@
 #'   the advantage that there's no way the examples can depend on anything in
 #'   the current session, but interactive code (like \code{\link{browser}})
 #'   won't work.
+#' @param document if \code{TRUE}, \code{\link{document}} will be run to ensure
+#'   examples are updated before running them.
 #' @keywords programming
 #' @export
 run_examples <- function(pkg = ".", start = NULL, show = TRUE, test = FALSE,
-                         run = TRUE, fresh = FALSE) {
+                         run = TRUE, fresh = FALSE, document = TRUE) {
   pkg <- as.package(pkg)
-  document(pkg)
+
+  if (fresh) {
+    to_run <-
+      eval(substitute(
+          function() devtools::run_examples(pkg = path, start = start, test = test, run = run, fresh = FALSE),
+          list(path = pkg$path, start = start, test = test, run = run)))
+    callr::r(to_run, show = TRUE, spinner = FALSE)
+    return(invisible())
+  }
+
+  if (document) {
+    document(pkg)
+  }
 
   if (!missing(show)) {
     warning("`show` is deprecated", call. = FALSE)
   }
 
-  files <- rd_files(pkg, start = start)
+  files <- rd_files(pkg$path, start = start)
   if (length(files) == 0)
     return()
 
-  rule("Running ", length(files), " example files in ", pkg$package)
+  cat_rule(
+    left = paste0("Running ", length(files), " example files"),
+    right = pkg$package
+  )
 
-  if (fresh) {
-    to_run <- eval(substitute(function() devtools::run_examples(path), list(path = pkg$path)))
-    callr::r(to_run, show = TRUE)
-  } else {
-    load_all(pkg, reset = TRUE, export_all = FALSE)
-    on.exit(load_all(pkg, reset = TRUE))
+  load_all(pkg$path, reset = TRUE, export_all = FALSE)
+  on.exit(load_all(pkg$path, reset = TRUE))
 
-    lapply(files, pkgload::run_example, show = show, test = test, run = run)
-  }
+  lapply(files, pkgload::run_example, test = test, run = run)
 
   invisible()
 }

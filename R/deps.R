@@ -106,8 +106,7 @@ dev_package_deps <- function(pkg = ".", dependencies = NA,
   deps <- unlist(lapply(parsed, `[[`, "name"), use.names = FALSE)
 
   if (isTRUE(bioconductor) && is_bioconductor(pkg)) {
-    check_bioconductor()
-    bioc_repos <- BiocInstaller::biocinstallRepos()
+    bioc_repos <- bioconductor_repositories()
 
     missing_repos <- setdiff(names(bioc_repos), names(repos))
 
@@ -197,7 +196,11 @@ parse_one_remote <- function(x) {
 }
 
 split_remotes <- function(x) {
-  trim_ws(unlist(strsplit(x, ",[[:space:]]*")))
+  pkgs <- trim_ws(unlist(strsplit(x, ",[[:space:]]*")))
+  if (any((res <- grep("[[:space:]]+", pkgs)) != -1)) {
+    stop("Missing commas separating Remotes: '", pkgs[res], "'", call. = FALSE)
+  }
+  pkgs
 }
 
 remote_deps <- function(pkg) {
@@ -272,7 +275,7 @@ update.package_deps <- function(object, ..., quiet = FALSE, upgrade = TRUE) {
   unavailable <- object$diff == UNAVAILABLE & non_cran
   if (any(unavailable)) {
     if (upgrade) {
-      install_remotes(object$remote[unavailable], ..., quiet = quiet)
+      install_remotes(object$remote[unavailable], ..., quiet = quiet, upgrade = upgrade)
     } else if (!quiet) {
       message(sprintf(ngettext(sum(unavailable),
             "Skipping %d unavailable package: %s",
@@ -284,7 +287,7 @@ update.package_deps <- function(object, ..., quiet = FALSE, upgrade = TRUE) {
   ahead <- object$diff == AHEAD & non_cran
   if (any(ahead)) {
     if (upgrade) {
-      install_remotes(object$remote[ahead], ..., quiet = quiet)
+      install_remotes(object$remote[ahead], ..., quiet = quiet, upgrade = upgrade)
     } else if (!quiet) {
       message(sprintf(ngettext(sum(ahead),
             "Skipping %d package ahead of CRAN: %s",
@@ -299,7 +302,7 @@ update.package_deps <- function(object, ..., quiet = FALSE, upgrade = TRUE) {
     behind <- is.na(object$installed)
   }
 
-  install_remotes(object$remote[behind], ..., quiet = quiet)
+  install_remotes(object$remote[behind], ..., quiet = quiet, upgrade = upgrade)
 }
 
 install_packages <- function(pkgs, repos = getOption("repos"),
@@ -314,7 +317,7 @@ install_packages <- function(pkgs, repos = getOption("repos"),
     ), length(pkgs), paste(pkgs, collapse = ", ")))
 
   pkgbuild::with_build_tools(
-    withr::with_options("install.packages.compile.from.source" = "never",
+    withr::with_options(list("install.packages.compile.from.source" = "never"),
       utils::install.packages(pkgs, repos = repos, type = type,
         dependencies = dependencies, quiet = quiet
       )

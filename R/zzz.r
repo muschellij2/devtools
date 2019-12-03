@@ -1,6 +1,7 @@
 #' @importFrom utils available.packages contrib.url install.packages
-#'   installed.packages menu modifyList packageDescription
+#'   installed.packages modifyList packageDescription
 #'   packageVersion remove.packages
+#' @importFrom cli cat_rule cat_line cat_bullet
 NULL
 
 #' Package development tools for R.
@@ -35,7 +36,7 @@ NULL
 #' }
 #' @docType package
 #' @name devtools
-NULL
+"_PACKAGE"
 
 #' Deprecated Functions
 #'
@@ -45,9 +46,7 @@ NULL
 #' @keywords internal
 NULL
 
-.onLoad <- function(libname, pkgname) {
-  op <- options()
-  op.devtools <- list(
+devtools_default_options <- list(
     devtools.path = "~/R-dev",
     devtools.install.args = "",
     devtools.name = "Your name goes here",
@@ -57,8 +56,17 @@ NULL
     devtools.desc = list(),
     devtools.revdep.libpath = file.path(tempdir(), "R-lib")
   )
-  toset <- !(names(op.devtools) %in% names(op))
-  if(any(toset)) options(op.devtools[toset])
+
+.onLoad <- function(libname, pkgname) {
+  op <- options()
+  toset <- !(names(devtools_default_options) %in% names(op))
+  if(any(toset)) options(devtools_default_options[toset])
 
   invisible()
+}
+
+.onAttach <- function(libname, pkgname) {
+  env <- as.environment(paste0("package:", pkgname))
+  env[[".conflicts.OK"]] <- TRUE
+  suppressPackageStartupMessages((get("library", baseenv()))("usethis"))
 }

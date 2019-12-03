@@ -76,6 +76,59 @@ github_tag <- function(username, repo, ref = "master") {
   github_GET(file.path("repos", username, repo, "tags", ref))
 }
 
+github_DESCRIPTION <- function(username, repo, ref = "master", ...) {
+  query <-
+    "query ($org: String!, $repo: String!, $expr: String!) {
+        repository(owner: $org, name: $repo) {
+          DESCRIPTION: object(expression: $expr) {
+            ... on Blob {
+              text
+            }
+          }
+        }
+      }"
+  res <- github_POST("graphql", body =
+    jsonlite::toJSON(auto_unbox = TRUE,
+      list(
+        query = query,
+        variables = list(
+          org = username,
+          repo = repo,
+          expr = paste0(ref, ":", "DESCRIPTION")
+        )
+      )
+    )
+  )
+
+  res$data$repository$DESCRIPTION$text
+}
+
+github_sha <- function(username, repo, ref = "master", ...) {
+  query <-
+   "query ($org: String!, $repo: String!, $ref: String!) {
+      repository(owner: $org, name: $repo) {
+        object(expression: $ref) {
+          oid
+        }
+      }
+    }"
+
+  res <- github_POST("graphql", body =
+    jsonlite::toJSON(auto_unbox = TRUE,
+      list(
+        query = query,
+        variables = list(
+          org = username,
+          repo = repo,
+          ref = ref
+        )
+      )
+    )
+  )
+
+  res$data$repository$object$oid %||% NA_character_
+}
+
 #' Retrieve Github personal access token.
 #'
 #' A github personal access token
@@ -83,7 +136,7 @@ github_tag <- function(username, repo, ref = "master") {
 #'
 #' @keywords internal
 #' @export
-github_pat <- function(quiet = FALSE) {
+github_pat <- function(quiet = TRUE) {
   pat <- Sys.getenv("GITHUB_PAT")
   if (nzchar(pat)) {
     if (!quiet) {
@@ -108,3 +161,7 @@ github_pat <- function(quiet = FALSE) {
 in_ci <- function() {
   nzchar(Sys.getenv("CI"))
 }
+
+github_user <- memoise::memoise(function(..., pat = github_pat(), host = "https://api.github.com") {
+  github_GET("/user", ...)[["login"]]
+})

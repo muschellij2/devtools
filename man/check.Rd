@@ -5,22 +5,24 @@
 \alias{check_built}
 \title{Build and check a package, cleaning up automatically on success.}
 \usage{
-check(pkg = ".", document = TRUE, build_args = NULL, ...,
-  manual = FALSE, cran = TRUE, check_version = FALSE,
+check(pkg = ".", document = NA, build_args = NULL, ..., manual = FALSE,
+  cran = TRUE, remote = FALSE, incoming = remote,
   force_suggests = FALSE, run_dont_test = FALSE, args = NULL,
-  env_vars = NULL, quiet = FALSE, check_dir = tempdir(), cleanup = TRUE)
+  env_vars = NULL, quiet = FALSE, check_dir = tempdir(), cleanup = TRUE,
+  error_on = c("never", "error", "warning", "note"))
 
-check_built(path = NULL, cran = TRUE, check_version = FALSE,
+check_built(path = NULL, cran = TRUE, remote = FALSE, incoming = remote,
   force_suggests = FALSE, run_dont_test = FALSE, manual = FALSE,
-  args = NULL, env_vars = NULL, needs_build_tools = TRUE,
-  check_dir = tempdir(), quiet = FALSE)
+  args = NULL, env_vars = NULL, check_dir = tempdir(), quiet = FALSE,
+  error_on = c("never", "error", "warning", "note"))
 }
 \arguments{
 \item{pkg}{package description, can be path or package name.  See
 \code{\link{as.package}} for more information}
 
-\item{document}{if \code{TRUE} (the default), will update and check
-documentation before running formal check.}
+\item{document}{If \code{NA} and the package uses roxygen2, will
+rerun \code{\link{document}} prior to checking. Use \code{TRUE}
+and \code{FALSE} to override this default.}
 
 \item{build_args}{Additional arguments passed to \code{R CMD build}}
 
@@ -32,9 +34,12 @@ documentation before running formal check.}
 \item{cran}{if \code{TRUE} (the default), check using the same settings as
 CRAN uses.}
 
-\item{check_version}{Sets \code{_R_CHECK_CRAN_INCOMING_} env var.
-If \code{TRUE}, performs a number of checked related
-to version numbers of packages on CRAN.}
+\item{remote}{Sets \code{_R_CHECK_CRAN_INCOMING_REMOTE_} env var.
+If \code{TRUE}, performs a number of CRAN incoming checks that require
+remote access.}
+
+\item{incoming}{Sets \code{_R_CHECK_CRAN_INCOMING_} env var.
+If \code{TRUE}, performs a number of CRAN incoming checks.}
 
 \item{force_suggests}{Sets \code{_R_CHECK_FORCE_SUGGESTS_}. If
 \code{FALSE} (the default), check will proceed even if all suggested
@@ -50,14 +55,21 @@ submission.}
 
 \item{quiet}{if \code{TRUE} suppresses output from this function.}
 
-\item{check_dir}{the directory in which the package is checked}
+\item{check_dir}{the directory in which the package is checked
+compatibility. \code{args = "--output=/foo/bar"} can be used to change the
+check directory.}
 
 \item{cleanup}{Deprecated.}
 
-\item{path}{Path to built package.}
+\item{error_on}{Whether to throw an error on \code{R CMD check} failures.
+Note that the check is always completed (unless a timeout happens),
+and the error is only thrown after completion. If \code{"never"}, then
+no errors are thrown. If \code{"error"}, then only \code{ERROR} failures
+generate errors. If \code{"warning"}, then \code{WARNING} failures generate
+errors as well. If \code{"note"}, then any check failure generated an
+error.}
 
-\item{needs_build_tools}{If \code{TRUE}, will ensure build tools are
-available when checking the package.}
+\item{path}{Path to built package.}
 }
 \value{
 An object containing errors, warnings, and notes.
@@ -98,7 +110,7 @@ with how check works on CRAN. This includes:
   is set to \code{TRUE}. If no spell checker is installed, a warning is
   issued.)
 
- \item env vars set by arguments \code{check_version} and
+ \item env vars set by arguments \code{incoming}, \code{remote} and
    \code{force_suggests}
 }
 }

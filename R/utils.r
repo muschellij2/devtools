@@ -16,16 +16,6 @@ compact <- function(x) {
   get(f, envir = asNamespace(p))
 }
 
-rule <- function(..., pad = "-") {
-  if (nargs() == 0) {
-    title <- ""
-  } else {
-    title <- paste0(..., " ")
-  }
-  width <- max(getOption("width") - nchar(title) - 1, 0)
-  message(title, paste(rep(pad, width, collapse = "")))
-}
-
 # check whether the specified file ends with newline
 ends_with_newline <- function(path) {
   conn <- file(path, open = "rb", raw = TRUE)
@@ -36,6 +26,8 @@ ends_with_newline <- function(path) {
 }
 
 render_template <- function(name, data = list()) {
+  check_suggested("whisker")
+
   path <- system.file("templates", name, package = "devtools")
   template <- readLines(path)
   whisker::whisker.render(template, data)
@@ -46,7 +38,24 @@ is_installed <- function(pkg, version = 0) {
   !is.na(installed_version) && installed_version >= version
 }
 
+bioconductor_repositories <- function() {
+  check_bioconductor()
+  if (getRversion() < 3.5) {
+    BiocInstaller::biocinstallRepos()
+  } else {
+    BiocManager::repositories()
+  }
+}
+
 check_bioconductor <- function() {
+  if (getRversion() < 3.5) {
+    check_bioconductor_3()
+  } else {
+    check_bioconductor_3.5()
+  }
+}
+
+check_bioconductor_3 <- function() {
   if (is_installed("BiocInstaller")) {
     return()
   }
@@ -66,54 +75,38 @@ check_bioconductor <- function() {
     stop("'BiocInstaller' not installed", call. = FALSE)
   }
 
-  suppressMessages(
-    source("https://bioconductor.org/biocLite.R")
+  # No https in earlier R versions
+  if (getRversion() < 3.2) {
+    suppressMessages(
+      source("http://bioconductor.org/biocLite.R")
+    )
+  } else {
+    suppressMessages(
+      source("https://bioconductor.org/biocLite.R")
+    )
+  }
+}
+
+check_bioconductor_3.5 <- function() {
+  if (is_installed("BiocManager")) {
+    return()
+  }
+
+  msg <- paste0("'BiocManager' must be installed to install Bioconductor packages")
+  if (!interactive()) {
+    stop(msg, call. = FALSE)
+  }
+
+  message(
+    msg, ".\n",
+    "Would you like to install it? "
   )
-}
 
-check_suggested <- function(pkg, version = NULL, compare = NA) {
-
-  if (is.null(version)) {
-    if (!is.na(compare)) {
-      stop("Cannot set ", sQuote(compare), " without setting ",
-           sQuote(version), call. = FALSE)
-    }
-
-    dep <- suggests_dep(pkg)
-
-    version <- dep$version
-    compare <- dep$compare
+  if (menu(c("Yes", "No")) != 1) {
+    stop("'BiocManager' not installed", call. = FALSE)
   }
 
-  if (!is_installed(pkg) || !check_dep_version(pkg, version, compare)) {
-    msg <- paste0(sQuote(pkg),
-      if (is.na(version)) "" else paste0(" >= ", version),
-      " must be installed for this functionality.")
-
-    if (interactive()) {
-      message(msg, "\nWould you like to install it?")
-      if (menu(c("Yes", "No")) == 1) {
-        install.packages(pkg)
-      } else {
-        stop(msg, call. = FALSE)
-      }
-    } else {
-      stop(msg, call. = FALSE)
-    }
-  }
-}
-
-suggests_dep <- function(pkg) {
-
-  suggests <- read_dcf(system.file("DESCRIPTION", package = "devtools"))$Suggests
-  deps <- parse_deps(suggests)
-
-  found <- which(deps$name == pkg)[1L]
-
-  if (!length(found)) {
-     stop(sQuote(pkg), " is not in Suggests: for devtools!", call. = FALSE)
-  }
-  deps[found, ]
+  install_cran("BiocManager")
 }
 
 read_dcf <- function(path) {
@@ -178,7 +171,11 @@ file_ext <- function (x) {
 }
 
 is_bioconductor <- function(x) {
-  x$package != "BiocInstaller" && !is.null(x$biocviews)
+  if (getRversion() < 3.5) {
+    (x$package != "BiocInstaller") && !is.null(x$biocviews)
+  } else {
+    (x$package != "BiocManager" || x$package != "BiocInstaller") && !is.null(x$biocviews)
+  }
 }
 
 trim_ws <- function(x) {
@@ -216,5 +213,37 @@ is_loaded <- function(pkg = ".") {
 }
 
 is_attached <- function(pkg = ".") {
-  !is.null(pkgload::pkg_env(pkg))
+  !is.null(pkgload::pkg_env(pkg$package))
+}
+
+# This is base::trimws from 3.2 on
+trim_ws <- function (x, which = c("both", "left", "right")) {
+    which <- match.arg(which)
+    mysub <- function(re, x) sub(re, "", x, perl = TRUE)
+    if (which == "left")
+        return(mysub("^[ \t\r\n]+", x))
+    if (which == "right")
+        return(mysub("[ \t\r\n]+$", x))
+    mysub("[ \t\r\n]+$", mysub("^[ \t\r\n]+", x))
+}
+
+# throws a warning if the argument is not the current directory.
+warn_unless_current_dir <- function(pkg, envir = parent.frame()) {
+  if (pkg != ".") {
+    warning("`pkg` is not `.`, which is now unsupported.\n  Please use `usethis::proj_set()` to set the project directory.", immediate. = TRUE)
+    local_proj(pkg, .local_envir = envir)
+  }
+}
+
+menu <- function(...) {
+  utils::menu(...)
+}
+
+file.info <- function(...) {
+  base::file.info(...)
+}
+
+escape_special_regex <- function(x) {
+  chars <- c("*", ".", "?", "^", "+", "$", "|", "(", ")", "[", "]", "{", "}", "\\")
+  gsub(paste0("([\\", paste0(collapse = "\\", chars), "])"), "\\\\\\1", x, perl = TRUE)
 }

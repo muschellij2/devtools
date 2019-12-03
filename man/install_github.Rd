@@ -5,7 +5,7 @@
 \title{Attempts to install a package directly from GitHub.}
 \usage{
 install_github(repo, username = NULL, ref = "master", subdir = NULL,
-  auth_token = github_pat(quiet), host = "https://api.github.com",
+  auth_token = github_pat(), host = "https://api.github.com",
   quiet = FALSE, ...)
 }
 \arguments{
@@ -16,12 +16,13 @@ specify \code{subdir} and/or \code{ref} using the respective parameters
 precedence.}
 
 \item{username}{User name. Deprecated: please include username in the
-\code{repo}}
+\code{repo} instead.}
 
-\item{ref}{Desired git reference. Could be a commit, tag, or branch
-name, or a call to \code{\link{github_pull}}. Defaults to \code{"master"}.}
+\item{ref}{Desired git reference. Deprecated: please include ref in
+\code{repo} instead.}
 
-\item{subdir}{subdirectory within repo that contains the R package.}
+\item{subdir}{subdirectory within repo that contains the R package.
+Deprecated: please include subdir in \code{repo} instead.}
 
 \item{auth_token}{To install from a private repo, generate a personal
 access token (PAT) in \url{https://github.com/settings/tokens} and
@@ -57,7 +58,7 @@ install_github(c("hadley/httr@v0.4", "klutometis/roxygen#142",
   "mfrasca/r-logging/pkg"))
 
 # Update devtools to the latest version, on Linux and Mac
-install_github("hadley/devtools")
+install_github("r-lib/devtools")
 
 # To install from a private repo, use auth_token with a token
 # from https://github.com/settings/tokens. You only need the
@@ -72,8 +73,8 @@ install_github("hadley/private", auth_token = "abc")
 
 Other package installation: \code{\link{install_bioc}},
   \code{\link{install_bitbucket}},
-  \code{\link{install_cran}}, \code{\link{install_git}},
-  \code{\link{install_svn}}, \code{\link{install_url}},
-  \code{\link{install_version}}, \code{\link{install}},
-  \code{\link{uninstall}}
+  \code{\link{install_cran}}, \code{\link{install_gitlab}},
+  \code{\link{install_git}}, \code{\link{install_svn}},
+  \code{\link{install_url}}, \code{\link{install_version}},
+  \code{\link{install}}, \code{\link{uninstall}}
 }

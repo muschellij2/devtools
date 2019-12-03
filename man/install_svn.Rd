@@ -12,8 +12,7 @@ install_svn(url, subdir = NULL, args = character(0), ..., revision = NULL,
 private repository.}
 
 \item{subdir}{A sub-directory withing a svn repository that may contain the
-package we are interested in installing. By default, this
-points to the 'trunk' directory.}
+package we are interested in installing.}
 
 \item{args}{A character vector providing extra arguments to pass on to}
 
@@ -41,7 +40,7 @@ install_svn("https://github.com/hadley/httr")
 Other package installation: \code{\link{install_bioc}},
   \code{\link{install_bitbucket}},
   \code{\link{install_cran}}, \code{\link{install_github}},
-  \code{\link{install_git}}, \code{\link{install_url}},
-  \code{\link{install_version}}, \code{\link{install}},
-  \code{\link{uninstall}}
+  \code{\link{install_gitlab}}, \code{\link{install_git}},
+  \code{\link{install_url}}, \code{\link{install_version}},
+  \code{\link{install}}, \code{\link{uninstall}}
 }

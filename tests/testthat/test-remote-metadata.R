@@ -21,7 +21,7 @@ test_that("install on packages adds metadata", {
 
 
     # cleanup code for when we are all finished
-    on.exit(unload(test_pkg), add = TRUE)
+    on.exit(unload(pkgload::pkg_name(test_pkg)), add = TRUE)
     on.exit(erase(test_pkg), add = TRUE)
 
     # first time loading the package
@@ -39,13 +39,13 @@ test_that("install on packages adds metadata", {
     library("testMetadataInstall")
     pkg_info <- session_info()$packages
     pkg_source <- pkg_info[pkg_info[, "package"] %in% "testMetadataInstall", "source"]
-    pkg_sha <- substring(git2r::commits(r)[[1]]@sha, 1, 7)
+    pkg_sha <- substring(git2r::commits(r)[[1]]$sha, 1, 7)
     expect_match(pkg_source, pkg_sha)
 
     # dirty the repo
     cat("just a test", file = file.path(test_pkg, "test.txt"))
     install(test_pkg, quiet = TRUE)
-    pkg_info <- session_info()$packages
+    suppressWarnings(pkg_info <- session_info()$packages)
     pkg_source <- pkg_info[pkg_info[, "package"] %in% "testMetadataInstall", "source"]
     expect_match(pkg_source, "local")
 
@@ -56,7 +56,7 @@ test_that("install on packages adds metadata", {
     install(test_pkg, quiet = TRUE)
     pkg_info <- session_info()$packages
     pkg_source <- pkg_info[pkg_info[, "package"] %in% "testMetadataInstall", "source"]
-    pkg_sha <- substring(git2r::commits(r)[[1]]@sha, 1, 7)
+    pkg_sha <- substring(git2r::commits(r)[[1]]$sha, 1, 7)
     expect_match(pkg_source, pkg_sha)
 
   })

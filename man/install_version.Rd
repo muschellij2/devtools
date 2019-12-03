@@ -30,7 +30,7 @@ archived source tarballs and tries to install an older version instead.}
     builds: see the section on \sQuote{Binary packages} for those.
   }
 
-\item{...}{Other arguments passed on to \code{\link{install}}.}
+\item{...}{Other arguments passed on to \code{\link{install.packages}}.}
 
 \item{quiet}{
     logical: if true, reduce the amount of output.
@@ -45,9 +45,9 @@ if you do by running \code{\link[pkgbuild]{has_build_tools}}.
 Other package installation: \code{\link{install_bioc}},
   \code{\link{install_bitbucket}},
   \code{\link{install_cran}}, \code{\link{install_github}},
-  \code{\link{install_git}}, \code{\link{install_svn}},
-  \code{\link{install_url}}, \code{\link{install}},
-  \code{\link{uninstall}}
+  \code{\link{install_gitlab}}, \code{\link{install_git}},
+  \code{\link{install_svn}}, \code{\link{install_url}},
+  \code{\link{install}}, \code{\link{uninstall}}
 }
 \author{
 Jeremy Stephens
