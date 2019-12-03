@@ -65,6 +65,10 @@ look in the current working directory - this is recommended practice.
    * `install_local()` from a local file on disk
    * `install_version()` from a specific version on CRAN
 
+* `update_packages()` updates a package to the latest version. This works
+  both on packages installed from CRAN as well as those installed from any of
+  the `install_*` functions.
+
 ### Check and release:
 
 * `check()` updates the documentation, then builds and checks the package locally.
@@ -81,13 +85,17 @@ look in the current working directory - this is recommended practice.
 R package development can be intimidating, however there are now a number of
 valuable resources to help!
 
-<a href="http://r-pkgs.had.co.nz/"><img src="http://r-pkgs.had.co.nz/cover.png" height="252" align = "right"/></a>
+<a href="http://r-pkgs.org"><img src="http://r-pkgs.org/images/cover.png" height="252" align = "right"/></a>
 
-1. [R Packages](http://r-pkgs.had.co.nz/) gives a comprehensive
-   treatment of all common parts of package development and uses devtools
-   throughout. The [Package
-   structure](http://r-pkgs.had.co.nz/package.html) chapter is a great place to get started
-   understanding the parts of a package and how they work together.
+1. R Packages is a book that gives a comprehensive treatment of all common parts
+   of package development and uses devtools throughout.
+    * The first edition is available at <http://r-pkgs.had.co.nz>, but note that
+      it has grown somewhat out of sync with the current version of devtools.
+    * A second edition is under development and is evolving to reflect the
+      current state of devtools. It is available at <http://r-pkgs.org>.
+    * The [Whole Game](http://r-pkgs.org/whole-game.html) and
+      [Package structure](http://r-pkgs.org/package-structure-state.html) chapters
+      make great places to start.
 
 2. [RStudio community - package
    development](https://community.rstudio.com/c/package-development)
@@ -102,6 +110,7 @@ valuable resources to help!
    - [Writing an R package from scratch - Hilary Parker](https://hilaryparker.com/2014/04/29/writing-an-r-package-from-scratch/)
    - [How to develop good R packages - Maëlle Salmon](http://www.masalmon.eu/2017/12/11/goodrpackages/)
    - [Making your first R package - Fong Chun Chan](http://tinyheero.github.io/jekyll/update/2015/07/26/making-your-first-R-package.html)
+   - [Writing an R package from scratch - Tomas Westlake](https://r-mageddon.netlify.com/post/writing-an-r-package-from-scratch/)
 
 5. [Writing R
    Extensions](https://cran.r-project.org/doc/manuals/r-release/R-exts.html) is
@@ -112,7 +121,7 @@ valuable resources to help!
 
 devtools started off as a lean-and-mean package to facilitate local package
 development, but over the years it accumulated more and more functionality.
-Currently devtools is undergoing a [conscious
+devtools has undergone a [conscious
 uncoupling](https://web.archive.org/web/20140326060230/http://www.goop.com/journal/be/conscious-uncoupling)
 to split out functionality into smaller, more tightly focussed packages. This
 includes:
@@ -122,6 +131,9 @@ includes:
 
 * [roxygen2](https://github.com/klutometis/roxygen): Function and package documentation
   (i.e. `document()`).
+
+* [remotes](https://github.com/r-lib/remotes): Installing packages (i.e.
+  `install_github()`).
 
 * [pkgbuild](https://github.com/r-lib/pkgbuild): Building binary packages
   (including checking if build tools are available) (i.e. `build()`).
@@ -147,6 +159,17 @@ devtools installs them all automatically. You will need to care, however, if
 you're filing a bug because reporting it at the correct place will lead to a
 speedier resolution.
 
+You also may need to care if you are trying to use some devtools functionality
+in your own package or deployed application. Generally in these cases it
+is better to depend on the particular package directly rather than depend on devtools,
+e.g. use `sessioninfo::session_info()` rather than `devtools::session_info()`,
+or `remotes::install_github()` vs `devtools::install_github()`.
+
+However for day to day development we recommend you continue to use
+`library(devtools)` to quickly load all needed development tools, just like
+`library(tidyverse)` quickly loads all the tools necessary for data exploration
+and visualization.
+
 ## Code of conduct
 
-Please note that the devtools project is released with a [Contributor Code of Conduct](.github/CODE_OF_CONDUCT.md). By contributing to this project, you agree to abide by its terms.
+Please note that the devtools project is released with a [Contributor Code of Conduct](https://github.com/r-lib/devtools/blob/master/.github/CODE_OF_CONDUCT.md). By contributing to this project, you agree to abide by its terms.

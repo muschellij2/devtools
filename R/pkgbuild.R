@@ -1,13 +1,19 @@
+#' @template devtools
+#' @param path Path in which to produce package.  If `NULL`, defaults to
+#'   the parent directory of the package.
 #' @inherit pkgbuild::build
 #' @param ... Additional arguments passed to [pkgbuild::build].
 #' @export
-build <- function(path = ".", dest_path = NULL, binary = FALSE, vignettes = TRUE,
+build <- function(pkg = ".", path = NULL, binary = FALSE, vignettes = TRUE,
                   manual = FALSE, args = NULL, quiet = FALSE, ...) {
-  if (rstudioapi::hasFun("documentSaveAll")) {
-    rstudioapi::documentSaveAll()
-  }
-  pkgbuild::build(path = path, dest_path = dest_path, binary = binary,
-    vignettes = vignettes, manual = manual, args = args, quiet = quiet, ...)
+  save_all()
+
+  check_dots_used(action = getOption("devtools.ellipsis_action", rlang::warn))
+
+  pkgbuild::build(
+    path = pkg, dest_path = path, binary = binary,
+    vignettes = vignettes, manual = manual, args = args, quiet = quiet, ...
+  )
 }
 
 #' @importFrom pkgbuild with_debug
@@ -21,3 +27,7 @@ pkgbuild::clean_dll
 #' @importFrom pkgbuild has_devel
 #' @export
 pkgbuild::has_devel
+
+#' @importFrom pkgbuild find_rtools
+#' @export
+pkgbuild::find_rtools

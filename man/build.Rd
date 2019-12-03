@@ -4,13 +4,14 @@
 \alias{build}
 \title{Build package}
 \usage{
-build(path = ".", dest_path = NULL, binary = FALSE, vignettes = TRUE,
+build(pkg = ".", path = NULL, binary = FALSE, vignettes = TRUE,
   manual = FALSE, args = NULL, quiet = FALSE, ...)
 }
 \arguments{
-\item{path}{Path to a package, or within a package.}
+\item{pkg}{The package to use, can be a file path to the package or a
+package object.  See \code{\link[=as.package]{as.package()}} for more information.}
 
-\item{dest_path}{path in which to produce package.  If \code{NULL}, defaults to
+\item{path}{Path in which to produce package.  If \code{NULL}, defaults to
 the parent directory of the package.}
 
 \item{binary}{Produce a binary (\code{--binary}) or source (
@@ -28,7 +29,7 @@ or \code{R CMD install} if \code{binary = TRUE}.}
 
 \item{quiet}{if \code{TRUE} suppresses output from this function.}
 
-\item{...}{Additional arguments passed to [pkgbuild::build].}
+\item{...}{Additional arguments passed to \link[pkgbuild:build]{pkgbuild::build}.}
 }
 \value{
 a string giving the location (including file name) of the built

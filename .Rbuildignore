@@ -1,3 +1,4 @@
+^CRAN-RELEASE$
 ^Meta$
 ^doc$
 ^\.github$
@@ -11,3 +12,7 @@
 ^codecov\.yml$
 ^_pkgdown\.yml$
 ^docs$
+^tests/testthat/test.*/\.Rbuildignore
+^script\.R$
+^pkgdown$
+^man-roxygen$

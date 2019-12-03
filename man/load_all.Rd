@@ -4,8 +4,8 @@
 \alias{load_all}
 \title{Load complete package.}
 \usage{
-load_all(path = ".", reset = TRUE, recompile = FALSE, export_all = TRUE,
-  helpers = TRUE, quiet = FALSE, ...)
+load_all(path = ".", reset = TRUE, recompile = FALSE,
+  export_all = TRUE, helpers = TRUE, quiet = FALSE, ...)
 }
 \arguments{
 \item{path}{Path to a package, or within a package.}
@@ -16,8 +16,8 @@ any pieces of the package. This is equivalent to running
 faster for large code bases, but is a significantly less accurate
 approximation.}
 
-\item{recompile}{force a recompile of DLL from source code, if present.
-This is equivalent to running \code{\link[pkgbuild:clean_dll]{pkgbuild::clean_dll()}} before
+\item{recompile}{DEPRECATED. force a recompile of DLL from source code, if
+present. This is equivalent to running \code{\link[pkgbuild:clean_dll]{pkgbuild::clean_dll()}} before
 \code{load_all}}
 
 \item{export_all}{If \code{TRUE} (the default), export all objects.
@@ -28,7 +28,7 @@ in the NAMESPACE file.}
 
 \item{quiet}{if \code{TRUE} suppresses output from this function.}
 
-\item{...}{Additional arguments passed to [pkgload::load].}
+\item{...}{Additional arguments passed to \code{\link[pkgload:load_all]{pkgload::load_all()}}.}
 }
 \description{
 \code{load_all} loads a package. It roughly simulates what happens
@@ -53,7 +53,7 @@ for more details.
 functions at the correct times.
 
 \item If you use \pkg{testthat}, will load all test helpers so
-you can access them interactively. Devtools sets the
+you can access them interactively. devtools sets the
 \code{DEVTOOLS_LOAD} environment variable to \code{"true"} to
 let you check whether the helpers are run during package loading.
 
@@ -96,3 +96,19 @@ a perfect replacement for \code{base::system.file}.
 
 }
 
+\examples{
+\dontrun{
+# Load the package in the current directory
+load_all("./")
+
+# Running again loads changed files
+load_all("./")
+
+# With reset=TRUE, unload and reload the package for a clean start
+load_all("./", TRUE)
+
+# With export_all=FALSE, only objects listed as exports in NAMESPACE
+# are exported
+load_all("./", export_all = FALSE)
+}
+}

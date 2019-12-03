@@ -5,8 +5,9 @@
 \alias{revdep_maintainers}
 \title{Reverse dependency tools.}
 \usage{
-revdep(pkg, dependencies = c("Depends", "Imports", "Suggests", "LinkingTo"),
-  recursive = FALSE, ignore = NULL, bioconductor = FALSE)
+revdep(pkg, dependencies = c("Depends", "Imports", "Suggests",
+  "LinkingTo"), recursive = FALSE, ignore = NULL,
+  bioconductor = FALSE)
 
 revdep_maintainers(pkg = ".")
 }
@@ -22,20 +23,18 @@ to follow.}
 \item{recursive}{If \code{TRUE} look for full set of recursive dependencies.}
 
 \item{ignore}{A character vector of package names to ignore. These packages
-will not appear in returned vector. This is used in
-\code{\link{revdep_check}} to avoid packages with installation problems
-or extremely long check times.}
+will not appear in returned vector.}
 
 \item{bioconductor}{If \code{TRUE} also look for dependencies amongst
-bioconductor packages.}
+Bioconductor packages.}
 }
 \description{
-Tools to check and notify maintainers of all CRAN and bioconductor
+Tools to check and notify maintainers of all CRAN and Bioconductor
 packages that depend on the specified package.
 }
 \details{
 The first run in a session will be time-consuming because it must download
-all package metadata from CRAN and bioconductor. Subsequent runs will
+all package metadata from CRAN and Bioconductor. Subsequent runs will
 be faster.
 }
 \examples{
@@ -46,6 +45,6 @@ revdep("ggplot2", ignore = c("xkcd", "zoo"))
 }
 }
 \seealso{
-\code{\link{revdep_check}()} to run R CMD check on all reverse
-  dependencies.
+The \href{https://github.com/r-lib/revdepcheck}{revdepcheck} package can
+be used to run R CMD check on all reverse dependencies.
 }

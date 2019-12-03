@@ -11,3 +11,5 @@ tests/testthat/infrastructure/
 script.R
 doc
 Meta
+tests/*/*/.gitignore
+docs/

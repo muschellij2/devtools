@@ -1,3 +1,7 @@
+template:
+  params:
+    ganalytics: UA-115082821-1
+
 reference:
   - title: Package Development
     description: Primary commands used when developing a package.
@@ -7,6 +11,7 @@ reference:
     - starts_with("build_")
     - document
     - check
+    - create
     - load_all
     - starts_with("package")
     - ends_with("package")
@@ -24,14 +29,35 @@ reference:
     - bash
     - clean_vignettes
     - dev_mode
-    - starts_with("dr_")
+    - dev_sitrep
     - github_pull
     - lint
     - missing_s3
-    - path
     - run_examples
     - session_info
     - show_news
     - starts_with("source_")
     - update_packages
     - wd
+    - save_all
+
+navbar:
+  title: ~
+  type: default
+  left:
+  - text: Reference
+    href: reference/index.html
+  - text: Articles
+    menu:
+    - text: Remote development dependencies
+      href: articles/dependencies.html
+  - text: News
+    menu:
+    - text: "Release notes"
+    - text: "Version 2.2.1"
+      href: https://www.tidyverse.org/articles/2019/09/devtools-2-2-1/
+    - text: "Version 2.0.0"
+      href: https://www.tidyverse.org/articles/2018/10/devtools-2-0-0/
+    - text: "------------------"
+    - text: "Change log"
+      href: news/index.html

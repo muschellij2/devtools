@@ -12,16 +12,17 @@
 build_site <- function(path = ".", quiet = TRUE, ...) {
   check_suggested("pkgdown")
 
-  if (rstudioapi::hasFun("documentSaveAll")) {
-    rstudioapi::documentSaveAll()
-  }
+  save_all()
 
   pkg <- as.package(path)
 
+  check_dots_used(action = getOption("devtools.ellipsis_action", rlang::warn))
+
   withr::with_temp_libpaths(action = "prefix", code = {
-    install(pkg = pkg$path, upgrade_dependencies = FALSE, reload = FALSE, quiet = quiet)
+    install(pkg = pkg$path, upgrade = "never", reload = FALSE, quiet = quiet)
     if (isTRUE(quiet)) {
-      withr::with_output_sink(tempfile(),
+      withr::with_output_sink(
+        tempfile(),
         pkgdown::build_site(pkg = pkg$path, ...)
       )
     } else {
